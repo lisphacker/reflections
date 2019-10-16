@@ -15,6 +15,22 @@ impl ops::Add for Vector3 {
     }
 }
 
+impl ops::Add<f32> for Vector3 {
+    type Output = Self;
+
+    fn add(self: Self, operand: f32) -> Self {
+        Vector3::new(self.x + operand, self.y + operand, self.z + operand)
+    }
+}
+
+impl ops::Add<Vector3> for f32 {
+    type Output = Vector3;
+
+    fn add(self: Self, operand: Vector3) -> Vector3 {
+        operand + self
+    }
+}
+
 impl ops::Sub for Vector3 {
     type Output = Self;
 
@@ -39,11 +55,7 @@ impl ops::Mul<Vector3> for f32 {
     type Output = Vector3;
 
     fn mul(self: Self, multiplier: Vector3) -> Vector3 {
-        Vector3::new(
-            self * multiplier.x,
-            self * multiplier.y,
-            self * multiplier.z,
-        )
+        multiplier * self
     }
 }
 
@@ -84,13 +96,13 @@ impl Vector3 {
         }
     }
 
-    fn copy(v: &Self) -> Self {
-        return Vector3 {
-            x: v.x,
-            y: v.y,
-            z: v.z,
-        };
-    }
+    // fn copy(v: &Self) -> Self {
+    //     return Vector3 {
+    //         x: v.x,
+    //         y: v.y,
+    //         z: v.z,
+    //     };
+    // }
 
     fn length(self: Self) -> f32 {
         return (self * self).sqrt();
@@ -99,6 +111,16 @@ impl Vector3 {
     pub fn normalize(self: Self) -> Self {
         self / self.length()
     }
+}
+
+pub struct HitResult {
+    pub t: f32,
+    pub point: Vector3,
+    pub normal: Vector3,
+}
+
+pub trait Hittable {
+    fn hit(self: Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult>;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -114,6 +136,10 @@ impl Ray {
             direction: direction,
         }
     }
+
+    pub fn at(self: Self, t: f32) -> Vector3 {
+        self.origin + self.direction * t
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -127,6 +153,85 @@ impl Sphere {
         Sphere {
             centre: centre,
             radius: radius,
+        }
+    }
+}
+
+impl Hittable for Sphere {
+    fn hit(self: Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
+        let oc = ray.origin - self.centre;
+        let a = ray.direction * ray.direction;
+        let b = 2.0 * (oc * ray.direction);
+        let c = (oc * oc) - self.radius * self.radius;
+        let discriminant = b * b - 4.0 * a * c;
+        if discriminant > 0.0 {
+            let temp = (-b - discriminant.sqrt()) / a;
+            if temp < t_max && temp > t_min {
+                let p = ray.at(temp);
+                Some(HitResult {
+                    t: temp,
+                    point: p,
+                    normal: (p - self.centre) / self.radius
+                })
+            }
+            else {
+                temp = (-b + discriminant.sqrt()) / a;
+                if temp < t_max && temp > t_min {
+                    let p = ray.at(temp);
+                    Some(HitResult {
+                        t: temp,
+                        point: p,
+                        normal: (p - self.centre) / self.radius
+                    })
+                }
+                else {
+                    None
+                }
+            }
+        }
+        else {
+            None
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct HittableList<'a> {
+    hittables: Vec<&'a dyn Hittable>
+}
+
+impl<'a> HittableList<'a> {
+    pub fn new() -> Self {
+        HittableList {
+            hittables: Vec::new()
+        }
+    }
+
+    pub fn add(self: &mut Self, hittable: &'a dyn Hittable) {
+        self.hittables.push(hittable)
+    }
+}
+
+impl<'a> Hittable for HittableList<'a> {
+    fn hit(self: Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
+        let mut hit = false;
+        let mut hit_result: HitResult;
+        for hittable in self.hittables.iter() {
+            let optional_result = hittable.hit(ray, t_min, t_max);
+            match optional_result {
+                Some(result) => if !hit || result.t < hit_result.t {
+                    hit = true;
+                    hit_result = result;
+                }
+                None => {}
+            }
+        }
+        
+        if hit {
+            Some(hit_result)
+        }
+        else {
+            None
         }
     }
 }

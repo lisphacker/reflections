@@ -121,7 +121,7 @@ pub struct HitResult {
 }
 
 pub trait Hittable {
-    fn hit(self: Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult>;
+    fn hit(self: &Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult>;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -159,7 +159,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(self: Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
+    fn hit(self: &Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let oc = ray.origin - self.centre;
         let a = ray.direction * ray.direction;
         let b = 2.0 * (oc * ray.direction);
@@ -176,7 +176,7 @@ impl Hittable for Sphere {
                 })
             }
             else {
-                temp = (-b + discriminant.sqrt()) / a;
+                let temp = (-b + discriminant.sqrt()) / a;
                 if temp < t_max && temp > t_min {
                     let p = ray.at(temp);
                     Some(HitResult {
@@ -196,18 +196,18 @@ impl Hittable for Sphere {
     }
 }
 
-pub struct HittableList<'a> {
-    hittables: &'a mut Vec<&'a dyn Hittable>
+pub struct HittableList {
+    hittables: Vec<Box<dyn Hittable>>
 }
 
-impl<'a> HittableList<'a> {
+impl HittableList {
     pub fn new() -> Self {
         HittableList {
-            hittables: &mut Vec::new()
+            hittables: Vec::new()
         }
     }
 
-    pub fn add(self: &mut Self, hittable: &'a dyn Hittable) {
+    pub fn add(self: &mut Self, hittable: Box<dyn Hittable>) {
         self.hittables.push(hittable)
     }
 }
@@ -222,8 +222,8 @@ impl<'a> HittableList<'a> {
 //     }
 // }
 
-impl<'a> Hittable for HittableList<'a> {
-    fn hit(self: Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
+impl Hittable for HittableList {
+    fn hit(self: &Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let mut hit = false;
         let mut hit_result: HitResult = HitResult { 
             t:      0.0,

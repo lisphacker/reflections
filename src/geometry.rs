@@ -162,9 +162,9 @@ impl Hittable for Sphere {
     fn hit(self: &Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let oc = ray.origin - self.centre;
         let a = ray.direction * ray.direction;
-        let b = 2.0 * (oc * ray.direction);
+        let b = oc * ray.direction;
         let c = (oc * oc) - self.radius * self.radius;
-        let discriminant = b * b - 4.0 * a * c;
+        let discriminant = b * b - a * c;
         if discriminant > 0.0 {
             let temp = (-b - discriminant.sqrt()) / a;
             if temp < t_max && temp > t_min {

@@ -113,6 +113,7 @@ impl Vector3 {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct HitResult {
     pub t: f32,
     pub point: Vector3,
@@ -195,15 +196,14 @@ impl Hittable for Sphere {
     }
 }
 
-#[derive(Copy, Clone)]
 pub struct HittableList<'a> {
-    hittables: Vec<&'a dyn Hittable>
+    hittables: &'a mut Vec<&'a dyn Hittable>
 }
 
 impl<'a> HittableList<'a> {
     pub fn new() -> Self {
         HittableList {
-            hittables: Vec::new()
+            hittables: &mut Vec::new()
         }
     }
 
@@ -212,10 +212,24 @@ impl<'a> HittableList<'a> {
     }
 }
 
+// //impl<'a> Copy for HittableList<'a> {}
+// impl<'a> Clone for HittableList<'a> {
+//     fn clone(self: &Self) -> Self {
+//         let &hittables: &mut Vec<&'a dyn Hittable> = &mut Vec::new();
+//         HittableList {
+//             hittables: hittables
+//         }
+//     }
+// }
+
 impl<'a> Hittable for HittableList<'a> {
     fn hit(self: Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let mut hit = false;
-        let mut hit_result: HitResult;
+        let mut hit_result: HitResult = HitResult { 
+            t:      0.0,
+            point:  Vector3::zero(),
+            normal: Vector3::zero()
+        };
         for hittable in self.hittables.iter() {
             let optional_result = hittable.hit(ray, t_min, t_max);
             match optional_result {

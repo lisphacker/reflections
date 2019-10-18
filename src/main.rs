@@ -66,10 +66,6 @@ fn main() {
     let cam = Camera::new();
     let mut image = RgbImage::new(nx, ny);
 
-    // println!("P3");
-    // println!("{} {}", nx, ny);
-    // println!("255");
-
     for y in 0..ny {
         for x in 0..nx {
             let mut col = Vector3::zero();
@@ -88,8 +84,6 @@ fn main() {
 
             let p = Rgb([ir, ig, ib]);
             image.put_pixel(x, ny - 1 - y, p);
-
-            // println!("{} {} {}", ir, ig, ib);
         }
     }
 

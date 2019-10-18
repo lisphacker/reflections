@@ -1,2 +1,2 @@
 # reflections
-Ray tracer in Rust
+My attempt to implement ['Ray Tracing in One Weekend' by Peter Shirley](https://raytracing.github.io/books/RayTracingInOneWeekend.html) using Rust

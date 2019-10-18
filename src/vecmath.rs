@@ -39,6 +39,22 @@ impl ops::Sub for Vector3 {
     }
 }
 
+impl ops::Sub<f32> for Vector3 {
+    type Output = Self;
+
+    fn sub(self: Self, operand: f32) -> Self {
+        Vector3::new(self.x - operand, self.y - operand, self.z - operand)
+    }
+}
+
+impl ops::Sub<Vector3> for f32 {
+    type Output = Vector3;
+
+    fn sub(self: Self, operand: Vector3) -> Vector3 {
+        operand - self
+    }
+}
+
 impl ops::Mul<f32> for Vector3 {
     type Output = Self;
 

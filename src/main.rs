@@ -1,18 +1,40 @@
 
 extern crate rand;
+extern crate image;
 
 mod vecmath;
 mod camera;
 mod geometry;
 
+use std::path::Path;
+
 use rand::Rng;
+use image::{Rgb, RgbImage};
+
 use vecmath::*;
 use camera::*;
 use geometry::*;
 
+fn random() -> f32 {
+    rand::thread_rng().gen()
+}
+
+fn random_in_unit_sphere() -> Vector3 {
+    let mut p = Vector3::one() * 100.0;
+
+    while p * p > 1.0 {
+        p = Vector3::new(random(), random(), random()) * 2.0 - 1.0;
+    };
+
+    p
+}
+
 fn color(ray: Ray, world: &HittableList) -> Vector3 {
     match world.hit(ray, 0.0, 1e+35) {
-        Some(result) => { 0.5 * (result.normal + 1.0) }
+        Some(result) => { 
+            let target = result.point + result.normal + random_in_unit_sphere();
+            0.5 * color(Ray::new(result.point, target - result.point), world)
+        }
         None => {
             let unit_dir = ray.direction.normalize();
             let t = 0.5 * (unit_dir.y + 1.0);
@@ -35,11 +57,10 @@ fn clamp(x: f32, min: f32, max: f32) -> f32 {
     }
 }
 
-fn random() -> f32 {
-    rand::thread_rng().gen()
-}
-
 fn main() {
+    let mut args = std::env::args();
+    let output_file_path = args.nth(1).expect("Output path could not be opened or written to");
+
     let nx = 200;
     let ny = 100;
     let ns = 100;
@@ -51,28 +72,37 @@ fn main() {
     world.add(Box::new(s2));
 
     let cam = Camera::new();
+    let mut image = RgbImage::new(nx, ny);
 
-    println!("P3");
-    println!("{} {}", nx, ny);
-    println!("255");
+    // println!("P3");
+    // println!("{} {}", nx, ny);
+    // println!("255");
 
-    for j in (0..ny - 1).rev() {
-        for i in 0..nx {
+    for y in 0..ny {
+        for x in 0..nx {
             let mut col = Vector3::zero();
             for _s in 0..ns {
-                let u = (i as f32 + random()) / (nx as f32);
-                let v = (j as f32 + random()) / (ny as f32);
+                let u = (x as f32 + random()) / (nx as f32);
+                let v = (y as f32 + random()) / (ny as f32);
             
                 let ray = cam.ray(u, v);
                 col = col + color(ray, &world);
             }
             col = col / (ns as f32);
 
-            let ir = clamp(255.0 * col.x, 0.0, 255.0) as i32;
-            let ig = clamp(255.0 * col.y, 0.0, 255.0) as i32;
-            let ib = clamp(255.0 * col.z, 0.0, 255.0) as i32;
+            let ir = clamp(255.0 * col.x.sqrt(), 0.0, 255.0) as u8;
+            let ig = clamp(255.0 * col.y.sqrt(), 0.0, 255.0) as u8;
+            let ib = clamp(255.0 * col.z.sqrt(), 0.0, 255.0) as u8;
 
-            println!("{} {} {}", ir, ig, ib);
+            let p = Rgb([ir, ig, ib]);
+            image.put_pixel(x, ny - 1 - y, p);
+
+            // println!("{} {} {}", ir, ig, ib);
         }
+    }
+
+    match image.save(Path::new(&output_file_path)) {
+        Ok(_) => {}
+        Err(_) => { eprintln!("Unable to write to {}", output_file_path); }
     }
 }

@@ -1,5 +1,13 @@
+
+extern crate rand;
+
+mod vecmath;
+mod camera;
 mod geometry;
 
+use rand::Rng;
+use vecmath::*;
+use camera::*;
 use geometry::*;
 
 fn color(ray: Ray, world: &HittableList) -> Vector3 {
@@ -27,10 +35,15 @@ fn clamp(x: f32, min: f32, max: f32) -> f32 {
     }
 }
 
+fn random() -> f32 {
+    rand::thread_rng().gen()
+}
+
 fn main() {
     let nx = 200;
     let ny = 100;
-
+    let ns = 100;
+    
     let lower_left_corner = Vector3::new(-2.0, -1.0, -1.0);
     let horizontal = Vector3::new(4.0, 0.0, 0.0);
     let vertical = Vector3::new(0.0, 2.0, 0.0);
@@ -42,18 +55,23 @@ fn main() {
     world.add(Box::new(s1));
     world.add(Box::new(s2));
 
+    let cam = Camera::new();
+
     println!("P3");
     println!("{} {}", nx, ny);
     println!("255");
 
     for j in (0..ny - 1).rev() {
         for i in 0..nx {
-            let u = (i as f32) / (nx as f32);
-            let v = (j as f32) / (ny as f32);
-
-            let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
-
-            let col = color(ray, &world);
+            let u = (i as f32 + random()) / (nx as f32);
+            let v = (j as f32 + random()) / (ny as f32);
+            
+            let mut col = Vector3::zero();
+            for s in 0..ns {
+                let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
+                col = col + color(ray, &world);
+            }
+            col = col / (ns as f32);
 
             let ir = clamp(255.0 * col.x, 0.0, 255.0) as i32;
             let ig = clamp(255.0 * col.y, 0.0, 255.0) as i32;

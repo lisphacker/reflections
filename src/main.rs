@@ -2,57 +2,44 @@
 extern crate rand;
 extern crate image;
 
-mod vecmath;
 mod camera;
 mod geometry;
+mod materials;
+mod rays;
+mod util;
+mod vecmath;
 
+use std::rc::Rc;
 use std::path::Path;
 
-use rand::Rng;
 use image::{Rgb, RgbImage};
 
 use vecmath::*;
 use camera::*;
 use geometry::*;
+use util::*;
+use rays::*;
+use materials::*;
 
-fn random() -> f32 {
-    rand::thread_rng().gen()
-}
+const MAX_DEPTH: i32 = 50;
 
-fn random_in_unit_sphere() -> Vector3 {
-    let mut p = Vector3::one() * 100.0;
-
-    while p * p > 1.0 {
-        p = Vector3::new(random(), random(), random()) * 2.0 - 1.0;
-    };
-
-    p
-}
-
-fn color(ray: Ray, world: &HittableList) -> Vector3 {
+fn color(ray: Ray, world: &HittableList, depth: i32) -> Vector3 {
     match world.hit(ray, 0.0, 1e+35) {
-        Some(result) => { 
-            let target = result.point + result.normal + random_in_unit_sphere();
-            0.5 * color(Ray::new(result.point, target - result.point), world)
+        Some(result) => {
+            if depth < MAX_DEPTH {
+                match result.material.scatter(ray, &result.geometry) {
+                    Some(result2) => { color(result2.scattered_ray, world, depth + 1).scale(result2.attenuation) }
+                    None          => { Vector3::zero() }
+                }
+            }
+            else {
+                Vector3::zero()
+            }
         }
         None => {
             let unit_dir = ray.direction.normalize();
             let t = 0.5 * (unit_dir.y + 1.0);
             (1.0 - t) * Vector3::one() + t * Vector3::new(0.5, 0.7, 1.0)
-        }
-    }
-}
-
-fn clamp(x: f32, min: f32, max: f32) -> f32 {
-    if x < min {
-        min
-    }
-    else {
-        if x > max {
-            max
-        }
-        else {
-            x
         }
     }
 }
@@ -66,10 +53,15 @@ fn main() {
     let ns = 100;
     
     let mut world = HittableList::new();
-    let s1 = Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5);
-    let s2 = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0);
+    let s0 = Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, Rc::new(Box::from(Lambertian::new(Vector3::new(0.8, 0.3, 0.3)))));
+    let s1 = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, Rc::new(Box::from(Lambertian::new(Vector3::new(0.8, 0.8, 0.0)))));
+    let s2 = Sphere::new(Vector3::new(1.0, 0.0, -1.0), 0.5, Rc::new(Box::from(Metal::new(Vector3::new(0.8, 0.6, 0.2), 1.0))));
+    let s3 = Sphere::new(Vector3::new(-1.0, 0.0, -1.0), 0.5, Rc::new(Box::from(Metal::new(Vector3::new(0.8, 0.8, 0.8), 0.3))));
+
+    world.add(Box::new(s0));
     world.add(Box::new(s1));
     world.add(Box::new(s2));
+    world.add(Box::new(s3));
 
     let cam = Camera::new();
     let mut image = RgbImage::new(nx, ny);
@@ -86,7 +78,7 @@ fn main() {
                 let v = (y as f32 + random()) / (ny as f32);
             
                 let ray = cam.ray(u, v);
-                col = col + color(ray, &world);
+                col = col + color(ray, &world, 0);
             }
             col = col / (ns as f32);
 

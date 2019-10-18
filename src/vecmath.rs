@@ -119,4 +119,12 @@ impl Vector3 {
     pub fn normalize(self: Self) -> Self {
         self / self.length()
     }
+
+    pub fn scale(self: Self, v: Self) -> Self {
+        Vector3 { x: self.x * v.x, y: self.y * v.y, z: self.z * v.z }
+    }
+}
+
+pub fn reflect(dir: Vector3, normal: Vector3) -> Vector3 {
+    dir - (2.0 * (dir * normal)) * normal
 }

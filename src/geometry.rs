@@ -1,29 +1,21 @@
+use std::rc::Rc;
 
 use crate::vecmath::*;
-use crate::camera::*;
+use crate::rays::*;
+use crate::materials::*;
 
-#[derive(Debug, Copy, Clone)]
-pub struct HitResult {
-    pub t: f32,
-    pub point: Vector3,
-    pub normal: Vector3,
-}
-
-pub trait Hittable {
-    fn hit(self: &Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult>;
-}
-
-#[derive(Debug, Copy, Clone)]
 pub struct Sphere {
     pub centre: Vector3,
     pub radius: f32,
+    pub material: Rc<Box<dyn Material>>
 }
 
 impl Sphere {
-    pub fn new(centre: Vector3, radius: f32) -> Self {
+    pub fn new(centre: Vector3, radius: f32, material: Rc<Box<dyn Material>>) -> Self {
         Sphere {
             centre: centre,
             radius: radius,
+            material: material
         }
     }
 }
@@ -40,9 +32,12 @@ impl Hittable for Sphere {
             if temp < t_max && temp > t_min {
                 let p = ray.at(temp);
                 Some(HitResult {
-                    t: temp,
-                    point: p,
-                    normal: (p - self.centre) / self.radius
+                    geometry: HitGeometry {
+                        t: temp,
+                        point: p,
+                        normal: (p - self.centre) / self.radius
+                    },
+                    material: self.material.clone()
                 })
             }
             else {
@@ -50,9 +45,12 @@ impl Hittable for Sphere {
                 if temp < t_max && temp > t_min {
                     let p = ray.at(temp);
                     Some(HitResult {
-                        t: temp,
-                        point: p,
-                        normal: (p - self.centre) / self.radius
+                        geometry: HitGeometry {
+                            t: temp,
+                            point: p,
+                            normal: (p - self.centre) / self.radius
+                        },
+                        material: self.material.clone()
                     })
                 }
                 else {
@@ -95,15 +93,18 @@ impl HittableList {
 impl Hittable for HittableList {
     fn hit(self: &Self, ray: Ray, t_min: f32, t_max: f32) -> Option<HitResult> {
         let mut hit = false;
-        let mut hit_result: HitResult = HitResult { 
-            t:      0.0,
-            point:  Vector3::zero(),
-            normal: Vector3::zero()
+        let mut hit_result: HitResult = HitResult {
+            geometry: HitGeometry {
+                t:        0.0,
+                point:    Vector3::zero(),
+                normal:   Vector3::zero()
+            },
+            material: Rc::new(Box::from(Lambertian::new(Vector3::zero())))
         };
         for hittable in self.hittables.iter() {
             let optional_result = hittable.hit(ray, t_min, t_max);
             match optional_result {
-                Some(result) => if !hit || result.t < hit_result.t {
+                Some(result) => if !hit || result.geometry.t < hit_result.geometry.t {
                     hit = true;
                     hit_result = result;
                 }

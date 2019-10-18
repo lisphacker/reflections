@@ -44,11 +44,6 @@ fn main() {
     let ny = 100;
     let ns = 100;
     
-    let lower_left_corner = Vector3::new(-2.0, -1.0, -1.0);
-    let horizontal = Vector3::new(4.0, 0.0, 0.0);
-    let vertical = Vector3::new(0.0, 2.0, 0.0);
-    let origin = Vector3::zero();
-
     let mut world = HittableList::new();
     let s1 = Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5);
     let s2 = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0);
@@ -63,12 +58,12 @@ fn main() {
 
     for j in (0..ny - 1).rev() {
         for i in 0..nx {
-            let u = (i as f32 + random()) / (nx as f32);
-            let v = (j as f32 + random()) / (ny as f32);
-            
             let mut col = Vector3::zero();
-            for s in 0..ns {
-                let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
+            for _s in 0..ns {
+                let u = (i as f32 + random()) / (nx as f32);
+                let v = (j as f32 + random()) / (ny as f32);
+            
+                let ray = cam.ray(u, v);
                 col = col + color(ray, &world);
             }
             col = col / (ns as f32);
